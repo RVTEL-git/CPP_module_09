@@ -44,17 +44,12 @@ bool BitcoinExchange::loadDatabase(const std::string& filename) {
 void trimspace(std::string &str)
 {
 	size_t start = str.find_first_not_of(" ");
-
 	size_t end = str.find_last_not_of(" ");
 
 	if (start == std::string::npos || end == std::string::npos)
-	{
 		str.clear();
-	}
 	else
-	{
 		str = str.substr(start, end - start + 1);
-	}
 }
 
 double BitcoinExchange::getBitcoinRate(const std::string &date)
