@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sys/time.h>
 
-PmergeMe::PmergeMe() {}
+PmergeMe::PmergeMe() : _V(0), _D(0) {}
 
 PmergeMe::PmergeMe(const PmergeMe &rhs) : _V(rhs._V), _D(rhs._D) {}
 
@@ -77,15 +77,27 @@ bool PmergeMe::parser(char *arg[], int ac) {
 	return (true);
 }
 
-std::vector<size_t> jacobsthalOrder(size_t pendSize)
+std::vector<size_t> jacobsthalOrder(std::vector<unsigned int> pend)
 {
 	std::vector<size_t> j;
 
 	j.push_back(0);
 	j.push_back(1);
 
-	for (size_t i = 2; i <= pendSize; i++)
-		j.push_back(j[i - 1] + 2 * j[i - 2]);
+	while (j.back() < pend.size())
+		j.push_back(j[j.size()-1] + 2 * j[j.size()-2]);
+	return (j);
+}
+
+std::deque<size_t> jacobsthalOrder(std::deque<unsigned int> pend)
+{
+	std::deque<size_t> j;
+
+	j.push_back(0);
+	j.push_back(1);
+
+	while (j.back() < pend.size())
+		j.push_back(j[j.size()-1] + 2 * j[j.size()-2]);
 	return (j);
 }
 
@@ -98,7 +110,7 @@ std::vector<unsigned int> PmergeMe::fordJohnson(std::vector<unsigned int> seq) {
 	if (hasSolo)
 		soloVal = seq.back();
 	std::vector<std::pair<unsigned int, unsigned int> > pairz;
-	for (size_t i = 1; i != seq.size(); i+= 2) {
+	for (size_t i = 1; i < seq.size(); i += 2) {
 		bool ordr = (seq[i] > seq[i-1]);
 		pairz.push_back(std::make_pair((ordr ? seq[i-1] : seq[i]), ordr ? seq[i] : seq[i-1]));
 	}
@@ -110,45 +122,97 @@ std::vector<unsigned int> PmergeMe::fordJohnson(std::vector<unsigned int> seq) {
 		pend.push_back(it->first);
 	}
 	main = fordJohnson(main);
-	std::vector<size_t>jacobsthal(jacobsthalOrder(pend.size()));
-	std::vector<unsigned int>ordre;
+	std::vector<size_t>jacobsthal(jacobsthalOrder(pend));
+	std::vector<size_t>ordre;
 	unsigned int k  = 1;
 	while (ordre.size() != pend.size()) {
-		for (size_t i = jacobsthal[k]; i != jacobsthal[k-1]+1; i--) {
+		for (size_t i = jacobsthal[k]; i >= jacobsthal[k-1]+1; i--) {
 			if (i <= pend.size())
 				ordre.push_back(i-1);
 		}
 		k++;
 	}
+	for (size_t n = 0; n < ordre.size(); n++) {
+		size_t index = ordre[n];
+		std::vector<unsigned int>::iterator borne = std::find(main.begin(), main.end(), pairz[index].second);
+		std::vector<unsigned int>::iterator pos  = std::lower_bound(main.begin(), borne + 1, pend[index]);
+		main.insert(pos, pend[index]);
+	}
+	if (hasSolo) {
+		std::vector<unsigned int>::iterator pos = std::lower_bound(main.begin(), main.end(), soloVal);
+		main.insert(pos, soloVal);
+	}
 	return (main);
 }
 
-std::deque<unsigned int> fordJohnson(std::deque<unsigned int> seq) {
-	
+std::deque<unsigned int> PmergeMe::fordJohnson(std::deque<unsigned int> seq) {
+	if (seq.size() <= 1)
+		return (seq);
+
+	unsigned int soloVal = 0;
+	bool hasSolo = seq.size() % 2;
+	if (hasSolo)
+		soloVal = seq.back();
+	std::deque<std::pair<unsigned int, unsigned int> > pairz;
+	for (size_t i = 1; i < seq.size(); i += 2) {
+		bool ordr = (seq[i] > seq[i-1]);
+		pairz.push_back(std::make_pair((ordr ? seq[i-1] : seq[i]), ordr ? seq[i] : seq[i-1]));
+	}
+	std::deque<unsigned int> main;
+	std::deque<unsigned int> pend;
+	std::deque<std::pair<unsigned int, unsigned int> >::iterator it;
+	for (it = pairz.begin(); it != pairz.end(); it++) {
+		main.push_back(it->second);
+		pend.push_back(it->first);
+	}
+	main = fordJohnson(main);
+	std::deque<size_t>jacobsthal(jacobsthalOrder(pend));
+	std::deque<unsigned int>ordre;
+	unsigned int k  = 1;
+	while (ordre.size() != pend.size()) {
+		for (size_t i = jacobsthal[k]; i >= jacobsthal[k-1]+1; i--) {
+			if (i <= pend.size())
+				ordre.push_back(i-1);
+		}
+		k++;
+	}
+	for (size_t n = 0; n < ordre.size(); n++) {
+		size_t index = ordre[n];
+		std::deque<unsigned int>::iterator borne = std::find(main.begin(), main.end(), pairz[index].second);
+		std::deque<unsigned int>::iterator pos  = std::lower_bound(main.begin(), borne + 1, pend[index]);
+		main.insert(pos, pend[index]);
+	}
+	if (hasSolo) {
+		std::deque<unsigned int>::iterator pos = std::lower_bound(main.begin(), main.end(), soloVal);
+		main.insert(pos, soloVal);
+	}
+	return (main);
 }
 
-void PmergeMe::printRunTime(const time_t &start, const time_t &end, bool vector) {
+void PmergeMe::printRunTime(const double elapsed, bool vector) {
 	std::cout << "Time to process a range of " << _V.size() << " elements with std::";
 	if (vector)
 		std::cout << "vector<unsigned int> : ";
 	else
 		std::cout << "deque<unsigned int> : ";
-	std::cout << start - end << " us" << std::endl;
+	std::cout << elapsed  << " us" << std::endl;
 }
 
 void PmergeMe::run() {
-	time_t start, end;
+	struct timeval start, end;
 
 	print(true);
-	start = time(NULL);
-	fordJohnson(_V);
-	end = time(NULL);
-	print(false);
-	printRunTime(start, end, true);
-	start = time(NULL);
-	fordJohnson(_D);
-	end = time(NULL);
-	printRunTime(start, end, false);
+	gettimeofday(&start, NULL);
+	_V = fordJohnson(_V);
+	gettimeofday(&end, NULL);
+	print (false);
+	double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+	printRunTime(elapsed, true);
+	gettimeofday(&start, NULL);
+	_D = fordJohnson(_D);
+	gettimeofday(&end, NULL);
+	elapsed = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+	printRunTime(elapsed, false);
 }
 
 void PmergeMe::print(bool before) {

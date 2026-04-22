@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <vector>
+#include <string>
 
 class PmergeMe {
 	private:
@@ -20,5 +21,5 @@ class PmergeMe {
 		bool insert(const std::string &toinsert);
 		void run();
 		void print(bool before);
-		void printRunTime(const time_t &start, const time_t &end, bool vector);
+		void printRunTime(const double elapsed, bool vector);
 };
